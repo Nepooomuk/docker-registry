@@ -1,0 +1,68 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: registry
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-pv-claim
+  namespace: build-tools
+  labels:
+    app: registry
+spec:
+  storageClassName: rook-block
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi 
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: registry
+  labels:
+    app: registry
+  namespace: registry
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: registry
+        component: main
+    spec:
+      containers:
+      - name: registry
+        image: registry:2.5
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - name: registry-persistent-storage
+          mountPath: /var/lib/registry
+      volumes:
+      - name: registry-persistent-storage
+        persistentVolumeClaim:
+          claimName: registry-pv-claim
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: registry
+  namespace: registry
+spec:
+  selector:
+    app: registry
+  ports:
+    - port: 5000
+      targetPort: 5000
